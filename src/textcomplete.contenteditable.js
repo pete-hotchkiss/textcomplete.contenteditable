@@ -32,17 +32,33 @@ export default class extends Editor {
   }
 
   applySearchResult(searchResult: SearchResult) {
-    const before = this.getBeforeCursor()
+    let before = this.getBeforeCursor()
     const after = this.getAfterCursor()
+
     if (before != null && after != null) {
+
+      if (searchResult.strategy.props.striptag) {
+        before = searchResult.strategy.props.striptag(before)
+      }
+
       const replace = searchResult.replace(before, after)
+
+
       if (Array.isArray(replace)) {
+
         const range = this.getRange()
-        range.selectNode(range.startContainer.firstChild) ? range.startContainer.firstChild : range.startContainer;
 
-        let hml = `${replace[0]}${repalce[1]}&nbsp;`;
+        if (range.startContainer.childNodes.length > 0) {
+            range.selectNode(range.startContainer.childNodes[range.endOffset]);
+        } else {
+              range.selectNode((range.startContainer.firstChild) ? range.startContainer.firstChild : range.startContainer);
+        }
 
-        this.document.execCommand("insertText", false, replace[0] + replace[1])
+        range.startContainer.focus();
+
+        let html = `${replace[0]}${repalce[1]}&nbsp;`;
+
+        this.document.execCommand("insertHTML", false, html);
         range.detach()
 
         const newRange = this.getRange();
@@ -55,7 +71,7 @@ export default class extends Editor {
         } else {
             newRange.setStart(newRange.startContainer, 1);
         }
-        newRange.collapse(true)
+        newRange.collapse(true);
       }
     }
   }
