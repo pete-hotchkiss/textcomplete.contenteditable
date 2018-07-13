@@ -56,7 +56,7 @@ export default class extends Editor {
 
         range.startContainer.focus();
 
-        let html = `${replace[0]}${repalce[1]}&nbsp;`;
+        let html = `${replace[0]}${replace[1]}&nbsp;`;
 
         this.document.execCommand("insertHTML", false, html);
         range.detach()

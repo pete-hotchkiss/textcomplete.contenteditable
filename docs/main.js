@@ -111,7 +111,7 @@ var SearchResult = function () {
         }
         var match = this.strategy.matchText(beforeCursor);
         if (match) {
-          replacement = replacement.replace(/\$&/g, match[0]).replace(/\$(\d+)/g, function (_, p1) {
+          replacement = replacement.replace(/\$&/g, match[0]).replace(/\$(\d)/g, function (_, p1) {
             return match[parseInt(p1, 10)];
           });
           return [[beforeCursor.slice(0, match.index), replacement, beforeCursor.slice(match.index + match[0].length)].join(""), afterCursor];
@@ -641,14 +641,14 @@ var createCustomEvent = exports.createCustomEvent = function () {
       return event;
     };
   }
-}
+}();
 
 /**
  * Get the current coordinates of the `el` relative to the document.
  *
  * @private
  */
-();function calculateElementOffset(el) {
+function calculateElementOffset(el) {
   var rect = el.getBoundingClientRect();
   var _el$ownerDocument = el.ownerDocument,
       defaultView = _el$ownerDocument.defaultView,
@@ -678,13 +678,13 @@ function isDigit(charCode) {
  * @private
  */
 function getLineHeightPx(node) {
-  var computedStyle = window.getComputedStyle(node
+  var computedStyle = window.getComputedStyle(node);
 
   // If the char code starts with a digit, it is either a value in pixels,
   // or unitless, as per:
   // https://drafts.csswg.org/css2/visudet.html#propdef-line-height
   // https://drafts.csswg.org/css2/cascade.html#computed-value
-  );if (isDigit(computedStyle.lineHeight.charCodeAt(0))) {
+  if (isDigit(computedStyle.lineHeight.charCodeAt(0))) {
     // In real browsers the value is *always* in pixels, even for unit-less
     // line-heights. However, we still check as per the spec.
     if (isDigit(computedStyle.lineHeight.charCodeAt(computedStyle.lineHeight.length - 1))) {
@@ -704,9 +704,9 @@ function getLineHeightPx(node) {
   tempNode.innerHTML = "&nbsp;";
   tempNode.style.fontSize = computedStyle.fontSize;
   tempNode.style.fontFamily = computedStyle.fontFamily;
-  body.appendChild(tempNode
+  body.appendChild(tempNode);
   // Assume the height of the element is the line-height
-  );var height = tempNode.offsetHeight;
+  var height = tempNode.offsetHeight;
   body.removeChild(tempNode);
   return height;
 }
@@ -742,6 +742,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+/*eslint no-unused-vars: off*/
 
 /**
  * Abstract class representing a editor target.
@@ -976,6 +977,7 @@ var Dropdown = function (_EventEmitter) {
 
     _this.shown = false;
     _this.items = [];
+    _this.activeItem = null;
     _this.footer = options.footer;
     _this.header = options.header;
     _this.maxCount = options.maxCount || 10;
@@ -1092,9 +1094,7 @@ var Dropdown = function (_EventEmitter) {
   }, {
     key: "getActiveItem",
     value: function getActiveItem() {
-      return this.items.find(function (item) {
-        return item.active;
-      });
+      return this.activeItem;
     }
 
     /**
@@ -1204,14 +1204,8 @@ var Dropdown = function (_EventEmitter) {
 
   }, {
     key: "moveActiveItem",
-    value: function moveActiveItem(name, e) {
-      var activeItem = this.getActiveItem();
-      var nextActiveItem = void 0;
-      if (activeItem) {
-        nextActiveItem = activeItem[name];
-      } else {
-        nextActiveItem = name === "next" ? this.items[0] : this.items[this.items.length - 1];
-      }
+    value: function moveActiveItem(direction, e) {
+      var nextActiveItem = direction === "next" ? this.activeItem ? this.activeItem.next : this.items[0] : this.activeItem ? this.activeItem.prev : this.items[this.items.length - 1];
       if (nextActiveItem) {
         nextActiveItem.activate();
         e.preventDefault();
@@ -1403,15 +1397,30 @@ var _class = function (_Editor) {
     value: function applySearchResult(searchResult) {
       var before = this.getBeforeCursor();
       var after = this.getAfterCursor();
+
       if (before != null && after != null) {
+
+        if (searchResult.strategy.props.striptag) {
+          before = searchResult.strategy.props.striptag(before);
+        }
+
         var replace = searchResult.replace(before, after);
+
         if (Array.isArray(replace)) {
+
           var range = this.getRange();
-          range.selectNode(range.startContainer.firstChild) ? range.startContainer.firstChild : range.startContainer;
 
-          var hml = "" + replace[0] + repalce[1] + "&nbsp;";
+          if (range.startContainer.childNodes.length > 0) {
+            range.selectNode(range.startContainer.childNodes[range.endOffset]);
+          } else {
+            range.selectNode(range.startContainer.firstChild ? range.startContainer.firstChild : range.startContainer);
+          }
 
-          this.document.execCommand("insertText", false, replace[0] + replace[1]);
+          range.startContainer.focus();
+
+          var html = "" + replace[0] + replace[1] + "&nbsp;";
+
+          this.document.execCommand("insertHTML", false, html);
           range.detach();
 
           var newRange = this.getRange();
@@ -2045,9 +2054,12 @@ var DropdownItem = function () {
     value: function destroy() {
       this.el.removeEventListener("mousedown", this.onClick, false);
       this.el.removeEventListener("mouseover", this.onMouseover, false);
-      this.el.removeEventListener("touchstart", this.onClick, false
+      this.el.removeEventListener("touchstart", this.onClick, false);
+      if (this.active) {
+        this.dropdown.activeItem = null;
+      }
       // This element has already been removed by {@link Dropdown#clear}.
-      );this._el = null;
+      this._el = null;
     }
 
     /**
@@ -2078,6 +2090,7 @@ var DropdownItem = function () {
         if (activeItem) {
           activeItem.deactivate();
         }
+        this.dropdown.activeItem = this;
         this.active = true;
         this.el.className = ACTIVE_CLASS_NAME;
       }
@@ -2097,6 +2110,7 @@ var DropdownItem = function () {
       if (this.active) {
         this.active = false;
         this.el.className = CLASS_NAME;
+        this.dropdown.activeItem = null;
       }
       return this;
     }
@@ -2106,15 +2120,15 @@ var DropdownItem = function () {
   }, {
     key: "onClick",
     value: function onClick(e) {
-      e.preventDefault // Prevent blur event
-      ();this.dropdown.select(this);
+      e.preventDefault(); // Prevent blur event
+      this.dropdown.select(this);
     }
 
     /** @private */
 
   }, {
     key: "onMouseover",
-    value: function onMouseover(_) {
+    value: function onMouseover() {
       this.activate();
     }
   }, {
