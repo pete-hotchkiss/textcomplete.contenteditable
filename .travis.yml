@@ -7,7 +7,6 @@ before_install:
 - export DISPLAY=:99.0
 - sh -e /etc/init.d/xvfb start
 script:
-- $(npm bin)/flow check
 - $(npm bin)/eslint src/textcomplete.codemirror.js test/**/*.js
 - $(npm bin)/karma start --single-run --browsers Firefox
 after_script:
